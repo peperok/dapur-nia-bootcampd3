@@ -1,0 +1,127 @@
+import type { Menu, Pelanggan, Pesanan } from '../types';
+
+export const initialMenus: Menu[] = [
+  {
+    id: 'Xa81kLm',
+    nama: 'Nasi Ayam Bakar',
+    harga: 25000,
+    sisa_porsi: 30,
+    tersedia: true,
+    dibuat_pada: '2026-10-01T07:00:00.000Z',
+  },
+  {
+    id: 'Yb92mLn',
+    nama: 'Nasi Rendang Sapi Padang',
+    harga: 32000,
+    sisa_porsi: 15,
+    tersedia: true,
+    dibuat_pada: '2026-10-01T07:15:00.000Z',
+  },
+  {
+    id: 'Zc03nMo',
+    nama: 'Nasi Gudeg Komplit Jogja',
+    harga: 22000,
+    sisa_porsi: 0, // Acceptance Criteria 2: sisa porsi 0 tampil dengan status habis
+    tersedia: true,
+    dibuat_pada: '2026-10-01T07:30:00.000Z',
+  },
+  {
+    id: 'Wd74kOp',
+    nama: 'Paket Tumpeng Mini Selamatan',
+    harga: 45000,
+    sisa_porsi: 8,
+    tersedia: false, // Disembunyikan dari menu aktif
+    dibuat_pada: '2026-10-01T08:00:00.000Z',
+  },
+];
+
+export const initialPelanggan: Pelanggan[] = [
+  {
+    id: '081234567890',
+    nama: 'Budi Santoso',
+    no_whatsapp: '081234567890',
+    alamat: 'Jl. Melati No. 12, RT 03/RW 05',
+    dibuat_pada: '2026-10-01T07:15:00.000Z',
+  },
+  {
+    id: '081987654321',
+    nama: 'Siti Aminah',
+    no_whatsapp: '081987654321',
+    alamat: 'Perumahan Cempaka Indah B4, RT 02/RW 01',
+    dibuat_pada: '2026-10-01T07:45:00.000Z',
+  },
+  {
+    id: '085678901234',
+    nama: 'Hendro Prasetyo',
+    no_whatsapp: '085678901234',
+    alamat: 'Jl. Boulevard Barat No. 8, Blok C2',
+    dibuat_pada: '2026-10-01T08:10:00.000Z',
+  },
+];
+
+export const initialPesanan: Pesanan[] = [
+  {
+    id: 'Pq72nRt',
+    pelanggan_id: '081234567890',
+    nama_pelanggan: 'Budi Santoso',
+    alamat_kirim: 'Jl. Melati No. 12, RT 03/RW 05',
+    menu_id: 'Xa81kLm',
+    nama_menu: 'Nasi Ayam Bakar',
+    harga_satuan: 25000,
+    jumlah_porsi: 2,
+    ongkir: 5000,
+    total: 55000,
+    status: 'menunggu_bayar',
+    bukti_bayar: '',
+    tanggal: '2026-10-01',
+    dibuat_pada: '2026-10-01T08:30:00.000Z',
+  },
+  {
+    id: 'Qr83oSu',
+    pelanggan_id: '081987654321',
+    nama_pelanggan: 'Siti Aminah',
+    alamat_kirim: 'Perumahan Cempaka Indah B4, RT 02/RW 01',
+    menu_id: 'Yb92mLn',
+    nama_menu: 'Nasi Rendang Sapi Padang',
+    harga_satuan: 32000,
+    jumlah_porsi: 3,
+    ongkir: 10000,
+    total: 106000,
+    status: 'dibayar',
+    bukti_bayar: 'Transfer BCA a.n Siti Aminah - Rp 106.000',
+    tanggal: '2026-10-01',
+    dibuat_pada: '2026-10-01T09:15:00.000Z',
+  },
+  {
+    id: 'Rs94pTv',
+    pelanggan_id: '085678901234',
+    nama_pelanggan: 'Hendro Prasetyo',
+    alamat_kirim: 'Jl. Boulevard Barat No. 8, Blok C2',
+    menu_id: 'Xa81kLm',
+    nama_menu: 'Nasi Ayam Bakar',
+    harga_satuan: 25000,
+    jumlah_porsi: 4,
+    ongkir: 5000,
+    total: 105000,
+    status: 'selesai',
+    bukti_bayar: 'QRIS Sukses Rp 105.000',
+    tanggal: '2026-10-01',
+    dibuat_pada: '2026-10-01T09:40:00.000Z',
+  },
+  {
+    id: 'St05qUw',
+    pelanggan_id: '081234567890',
+    nama_pelanggan: 'Budi Santoso',
+    alamat_kirim: 'Jl. Melati No. 12, RT 03/RW 05',
+    menu_id: 'Xa81kLm',
+    nama_menu: 'Nasi Ayam Bakar',
+    harga_satuan: 25000,
+    jumlah_porsi: 1,
+    ongkir: 5000,
+    total: 30000,
+    status: 'dibatalkan', // Tidak ikut dihitung di laporan harian
+    bukti_bayar: '',
+    tanggal: '2026-10-01',
+    dibuat_pada: '2026-10-01T10:00:00.000Z',
+  },
+];
