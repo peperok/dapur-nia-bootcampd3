@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { 
   Plus, Calendar, User, MapPin, 
   ArrowRight, CheckCircle2, AlertTriangle, 
-  ChevronRight, X
+  ChevronRight, X, Clock, Phone
 } from 'lucide-react';
-import type { Pesanan, Menu, Pelanggan, StatusPesanan } from '../../types';
+import type { Pesanan, Menu, Pelanggan, StatusPesanan, UserProfile } from '../../types';
 import { 
   formatRupiah, 
   getTodayDateString, 
@@ -25,6 +25,7 @@ interface PesananModuleProps {
   onUpdateStatusPesanan: (pesananId: string, nextStatus: StatusPesanan, buktiBayar?: string) => { success: boolean; error?: string };
   userRole?: 'tamu' | 'pelanggan' | 'pemilik';
   currentUserEmail?: string | null;
+  currentUserProfile?: UserProfile | null;
   initialSelectedMenu?: Menu | null;
   isMyOrdersOnly?: boolean;
 }
@@ -37,6 +38,7 @@ export const PesananModule: React.FC<PesananModuleProps> = ({
   onUpdateStatusPesanan,
   userRole = 'pemilik',
   currentUserEmail,
+  currentUserProfile,
   initialSelectedMenu,
   isMyOrdersOnly = false,
 }) => {
@@ -51,6 +53,18 @@ export const PesananModule: React.FC<PesananModuleProps> = ({
   const [ongkir, setOngkir] = useState<number | ''>(5000);
   const [tanggal, setTanggal] = useState<string>(getTodayDateString());
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Auto-open modal jika pelanggan mengklik "Pesan Sekarang" dari katalog menu
+  React.useEffect(() => {
+    if (initialSelectedMenu) {
+      setSelectedMenuId(initialSelectedMenu.id);
+      setJumlahPorsi(1);
+      setOngkir(5000);
+      setTanggal(getTodayDateString());
+      setFormError(null);
+      setIsAddModalOpen(true);
+    }
+  }, [initialSelectedMenu]);
 
   // Status update modal state
   const [actionModalPesanan, setActionModalPesanan] = useState<Pesanan | null>(null);
@@ -82,20 +96,46 @@ export const PesananModule: React.FC<PesananModuleProps> = ({
     e.preventDefault();
     setFormError(null);
 
-    if (!selectedPelangganId) {
-      setFormError('Pilih pelanggan terlebih dahulu.');
-      return;
+    let buyerId = selectedPelangganId;
+    let buyerName = '';
+    let buyerAlamat = '';
+
+    if (userRole === 'pelanggan' && currentUserProfile) {
+      buyerId = currentUserProfile.uid;
+      buyerName = currentUserProfile.displayName || currentUserEmail || 'Pelanggan';
+      buyerAlamat = currentUserProfile.alamat || 'Alamat sesuai profil pelanggan';
+    } else {
+      if (!selectedPelangganId) {
+        setFormError('Pilih pelanggan terlebih dahulu.');
+        return;
+      }
+      const pelanggan = pelangganList.find((p) => p.id === selectedPelangganId);
+      if (!pelanggan) {
+        setFormError('Data pelanggan tidak ditemukan.');
+        return;
+      }
+      buyerId = pelanggan.id;
+      buyerName = pelanggan.nama;
+      buyerAlamat = pelanggan.alamat;
     }
+
     if (!selectedMenuId) {
       setFormError('Pilih menu yang dipesan.');
       return;
     }
 
     const menu = menus.find((m) => m.id === selectedMenuId);
-    const pelanggan = pelangganList.find((p) => p.id === selectedPelangganId);
+    if (!menu) {
+      setFormError('Data menu tidak ditemukan.');
+      return;
+    }
 
-    if (!menu || !pelanggan) {
-      setFormError('Data menu atau pelanggan tidak ditemukan.');
+    // Validasi Waktu Pemesanan (Maksimal jam 12:00 siang)
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    if (currentHour > 12 || (currentHour === 12 && currentMinute > 0)) {
+      setFormError('Mohon maaf, pemesanan katering untuk hari ini sudah ditutup (Batas waktu maksimal jam 12.00 siang).');
       return;
     }
 
@@ -121,10 +161,10 @@ export const PesananModule: React.FC<PesananModuleProps> = ({
     const finalTotal = (menu.harga * qty) + ongkirNum;
 
     const result = onAddPesanan({
-      pelanggan_id: pelanggan.id,
+      pelanggan_id: buyerId,
       user_email: currentUserEmail || undefined,
-      nama_pelanggan: pelanggan.nama, // Salinan snapshot
-      alamat_kirim: pelanggan.alamat, // Salinan snapshot
+      nama_pelanggan: buyerName, // Salinan snapshot
+      alamat_kirim: buyerAlamat, // Salinan snapshot
       menu_id: menu.id,
       nama_menu: menu.nama, // Salinan snapshot
       harga_satuan: menu.harga, // Salinan snapshot
@@ -218,7 +258,7 @@ export const PesananModule: React.FC<PesananModuleProps> = ({
           Semua ({baseList.length})
         </Button>
         {(['menunggu_bayar', 'dibayar', 'diproses', 'selesai', 'dibatalkan'] as StatusPesanan[]).map((st) => {
-          const count = pesananList.filter(p => p.status === st).length;
+          const count = baseList.filter(p => p.status === st).length;
           const config = statusConfig[st];
           const isSelected = statusFilter === st;
           return (
@@ -347,16 +387,25 @@ export const PesananModule: React.FC<PesananModuleProps> = ({
         </div>
       )}
 
-      {/* Modal Buat Pesanan Baru */}
+      {/* Modal Buat Pesanan Baru (Responsive Bottom-sheet di Mobile & Centered Dialog di Desktop) */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-card rounded-2xl max-w-lg w-full p-4 sm:p-5 shadow-2xl border border-border max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-5 shadow-2xl border-t sm:border border-border max-h-[92vh] overflow-y-auto animate-in fade-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150">
+            {/* Mobile swipe grabber indicator */}
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 sm:hidden" />
+
             <div className="flex items-start justify-between pb-2 border-b border-border/60 mb-3">
               <div>
-                <h3 className="text-base sm:text-lg font-heading font-bold text-foreground">Buat Pesanan Katering Baru</h3>
+                <h3 className="text-base sm:text-lg font-heading font-bold text-foreground">
+                  {userRole === 'pelanggan' ? 'Konfirmasi Pesanan Katering' : 'Buat Pesanan Katering Baru'}
+                </h3>
                 <p className="text-[11px] sm:text-xs text-muted-foreground">
-                  Satu pesanan mencakup 1 menu dengan informasi snapshot otomatis.
+                  {userRole === 'pelanggan' ? 'Periksa porsi & alamat sebelum mengirim pesanan ke dapur.' : 'Satu pesanan mencakup 1 menu dengan informasi snapshot otomatis.'}
                 </p>
+                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Jadwal Order: Maksimal pukul <strong>12.00 siang</strong>.</span>
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -376,33 +425,52 @@ export const PesananModule: React.FC<PesananModuleProps> = ({
             )}
 
             <form onSubmit={handleCreatePesanan} className="space-y-3">
-              {/* Pilih Pelanggan */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Pilih Pelanggan <span className="text-destructive">*</span>
-                </label>
-                {pelangganList.length === 0 ? (
-                  <p className="text-xs text-destructive">Belum ada pelanggan terdaftar. Tambahkan pelanggan terlebih dahulu.</p>
-                ) : (
-                  <select
-                    value={selectedPelangganId}
-                    onChange={(e) => setSelectedPelangganId(e.target.value)}
-                    className="w-full px-3 py-1.5 sm:py-2 border border-input rounded-xl text-xs sm:text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    required
-                  >
-                    {pelangganList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nama} ({p.no_whatsapp}) - {p.alamat.substring(0, 30)}...
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {activePelanggan && (
-                  <div className="mt-1.5 p-2 bg-muted/60 rounded-lg text-[11px] text-muted-foreground">
-                    <strong className="text-foreground">Alamat Kirim:</strong> {activePelanggan.alamat}
+              {/* Informasi Pelanggan Pemesan */}
+              {userRole === 'pelanggan' ? (
+                <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Pemesan:</span>
+                    </span>
+                    <span className="font-extrabold text-slate-900">
+                      {currentUserProfile?.displayName || currentUserEmail?.split('@')[0] || 'Pelanggan'}
+                    </span>
                   </div>
-                )}
-              </div>
+                  <div className="mt-1 text-[11px] text-slate-600 flex items-start gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <span>{currentUserProfile?.alamat || 'Alamat sesuai data pendaftaran akun Anda'}</span>
+                  </div>
+                </div>
+              ) : (
+                /* Khusus Pemilik: Pilihan Pelanggan untuk input pesanan offline */
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Pilih Pelanggan <span className="text-destructive">*</span>
+                  </label>
+                  {pelangganList.length === 0 ? (
+                    <p className="text-xs text-destructive">Belum ada pelanggan terdaftar.</p>
+                  ) : (
+                    <select
+                      value={selectedPelangganId}
+                      onChange={(e) => setSelectedPelangganId(e.target.value)}
+                      className="w-full px-3 py-1.5 sm:py-2 border border-input rounded-xl text-xs sm:text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      required
+                    >
+                      {pelangganList.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nama} ({p.no_whatsapp}) - {p.alamat.substring(0, 30)}...
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {activePelanggan && (
+                    <div className="mt-1.5 p-2 bg-muted/60 rounded-lg text-[11px] text-muted-foreground">
+                      <strong className="text-foreground">Alamat Kirim:</strong> {activePelanggan.alamat}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Pilih Menu */}
               <div>

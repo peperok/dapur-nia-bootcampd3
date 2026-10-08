@@ -398,63 +398,22 @@ export const App: React.FC = () => {
       );
     }
 
-    // 1. Loading State (Bootcamp Simulator atau awal load Firestore)
-    if (simulatedState === 'loading' || (loadingFirebase && menus.length === 0)) {
+    // 1. Automatic Loading State (Saat data pertama kali disinkronkan dari Firestore)
+    if (loadingFirebase && menus.length === 0) {
       return <LoadingState message="Memuat data Dapur Nia langsung dari Firestore..." count={4} />;
     }
 
-    // 2. Error State
-    if (simulatedState === 'error' || firebaseError) {
+    // 2. Automatic Error State (Saat koneksi atau jaringan ke Firestore terputus/gagal)
+    if (firebaseError) {
       return (
         <ErrorState
-          message={firebaseError || "Gagal menyinkronkan data dengan sistem. Pastikan koneksi internet stabil dan coba kembali."}
+          message={firebaseError}
           onRetry={() => {
             setFirebaseError(null);
-            setSimulatedState('normal');
+            setLoadingFirebase(true);
           }}
         />
       );
-    }
-
-    // 3. Empty State Simulation
-    if (simulatedState === 'empty') {
-      switch (currentTab) {
-        case 'menu':
-        case 'kelola_menu':
-          return (
-            <EmptyState
-              title="Katalog Menu Kosong"
-              description="Belum ada menu katering yang ditambahkan ke sistem."
-              actionLabel="Tambah Menu Sekarang"
-              onAction={() => setSimulatedState('normal')}
-            />
-          );
-        case 'pelanggan':
-          return (
-            <EmptyState
-              title="Data Pelanggan Kosong"
-              description="Belum ada nomor WhatsApp pelanggan yang tersimpan."
-              actionLabel="Tambah Pelanggan Sekarang"
-              onAction={() => setSimulatedState('normal')}
-            />
-          );
-        case 'pesanan':
-          return (
-            <EmptyState
-              title="Daftar Pesanan Kosong"
-              description="Belum ada antrean pesanan katering untuk diproses."
-              actionLabel="Buat Pesanan Pertama"
-              onAction={() => setSimulatedState('normal')}
-            />
-          );
-        case 'laporan':
-          return (
-            <EmptyState
-              title="Laporan Penjualan Belum Tersedia"
-              description="Belum ada data pesanan sah yang dapat dihitung sebagai laporan."
-            />
-          );
-      }
     }
 
     // 4. Normal State
@@ -499,6 +458,8 @@ export const App: React.FC = () => {
             onUpdateStatusPesanan={handleUpdateStatusPesanan}
             userRole="pelanggan"
             currentUserEmail={currentUser?.email}
+            currentUserProfile={userProfile}
+            initialSelectedMenu={orderModalMenu}
             isMyOrdersOnly={true}
           />
         );
@@ -569,29 +530,10 @@ export const App: React.FC = () => {
         userProfile={userProfile}
         onLoginClick={() => setCurrentTab('auth')}
         onLogoutClick={handleLogout}
-        simulatedState={simulatedState}
-        setSimulatedState={setSimulatedState}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 py-2 sm:py-4">
-        {/* Banner indicator if running simulated state */}
-        {simulatedState !== 'normal' && (
-          <Alert className="mb-4 py-2 px-3 bg-secondary/80 border-border text-foreground flex items-center justify-between text-xs rounded-xl">
-            <AlertDescription className="text-xs">
-              ℹ️ Sedang menampilkan <strong>{simulatedState.toUpperCase()} STATE</strong> untuk pengujian & penilaian.
-            </AlertDescription>
-            <Button
-              variant="link"
-              size="sm"
-              onClick={() => setSimulatedState('normal')}
-              className="text-xs h-auto p-0 font-bold text-primary ml-2"
-            >
-              Kembali ke Normal
-            </Button>
-          </Alert>
-        )}
-
         {renderActiveModule()}
       </main>
 
